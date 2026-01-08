@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leitor de PDF com Voz</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Leitor de PDF com Voz</h1>
+        </header>
+        
+        <div class="upload-container">
+            <input type="file" id="pdf-file" accept="application/pdf" />
+            <button id="upload-button">Carregar PDF</button>
+        </div>
+        
+        <div class="controls">
+            <button id="prev-page">Página Anterior</button>
+            <span id="page-info">Página <span id="current-page">0</span> de <span id="total-pages">0</span></span>
+            <button id="next-page">Próxima Página</button>
+        </div>
+        
+        <div class="voice-controls">
+            <button id="read-page">Ler Página Atual</button>
+            <button id="pause-reading">Pausar</button>
+            <button id="resume-reading">Continuar</button>
+            <button id="stop-reading">Parar</button>
+            <div class="voice-settings">
+                <label for="voice-select">Voz:</label>
+                <select id="voice-select"></select>
+                <label for="speed-range">Velocidade:</label>
+                <input type="range" id="speed-range" min="0.5" max="2" step="0.1" value="1">
+                <span id="speed-value">1.0</span>
+            </div>
+        </div>
+        
+        <div id="pdf-container">
+            <canvas id="pdf-render"></canvas>
+        </div>
+        
+        <div id="text-content" class="hidden"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html> 
