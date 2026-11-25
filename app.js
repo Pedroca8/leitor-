@@ -14,6 +14,8 @@ let synth = window.speechSynthesis;
 let utterance = null;
 let voices = [];
 let isPaused = false;
+let isPlayingAI = false;
+let elevenlabsApiKey = localStorage.getItem('elevenlabs_api_key') || '';
 
 // Elementos da interface
 const fileInput = document.getElementById('pdf-file');
@@ -30,6 +32,16 @@ const voiceSelect = document.getElementById('voice-select');
 const speedRange = document.getElementById('speed-range');
 const speedValue = document.getElementById('speed-value');
 const textContent = document.getElementById('text-content');
+const voiceTypeRadios = document.querySelectorAll('input[name="voice-type"]');
+const browserVoicesDiv = document.getElementById('browser-voices');
+const aiVoicesDiv = document.getElementById('ai-voices');
+const readAiButton = document.getElementById('read-page-ai');
+const stopAiButton = document.getElementById('stop-reading-ai');
+const aiVoiceSelect = document.getElementById('ai-voice-select');
+const aiApiKeyInput = document.getElementById('ai-api-key');
+const saveApiKeyButton = document.getElementById('save-api-key');
+const audioPlayer = document.getElementById('ai-audio-player');
+const audioPlayerContainer = document.getElementById('audio-player-container');
 
 // Desabilitar botões inicialmente
 prevButton.disabled = true;
@@ -38,6 +50,13 @@ readButton.disabled = true;
 pauseButton.disabled = true;
 resumeButton.disabled = true;
 stopButton.disabled = true;
+readAiButton.disabled = true;
+stopAiButton.disabled = true;
+
+// Se já tiver uma API key salva, preencha o campo
+if (elevenlabsApiKey) {
+    aiApiKeyInput.value = elevenlabsApiKey;
+}
 
 // Renderizar uma página do PDF
 function renderPage(num) {
@@ -70,6 +89,7 @@ function renderPage(num) {
             currentText = text;
             document.getElementById('text-content').textContent = text;
             readButton.disabled = false;
+            readAiButton.disabled = false;
         });
         
         // Aguardar a conclusão da renderização
@@ -96,6 +116,7 @@ function prevPage() {
     pageNum--;
     queueRenderPage(pageNum);
     stopReading();
+    stopAIAudio();
 }
 
 // Ir para a próxima página
@@ -106,6 +127,7 @@ function nextPage() {
     pageNum++;
     queueRenderPage(pageNum);
     stopReading();
+    stopAIAudio();
 }
 
 // Colocar na fila a renderização da página
@@ -254,6 +276,123 @@ function updateSpeedValue() {
     speedValue.textContent = speedRange.value;
 }
 
+// Salvar a API key do ElevenLabs
+function saveApiKey() {
+    const apiKey = aiApiKeyInput.value.trim();
+    if (apiKey) {
+        elevenlabsApiKey = apiKey;
+        localStorage.setItem('elevenlabs_api_key', apiKey);
+        alert('API Key salva com sucesso!');
+    } else {
+        alert('Por favor, insira uma API Key válida.');
+    }
+}
+
+// Ler texto usando a API do ElevenLabs
+async function readWithElevenLabs() {
+    // Verificar se tem texto para ler
+    if (!currentText || currentText.trim() === '') {
+        alert('Não há texto para ler nesta página.');
+        return;
+    }
+    
+    // Limitar texto para não exceder o limite de caracteres gratuito (aconselhável para testes)
+    let truncatedText = currentText;
+    if (truncatedText.length > 2000) {
+        truncatedText = truncatedText.substring(0, 2000) + "... (texto limitado para preservar o plano gratuito)";
+    }
+    
+    // Alterar estado dos botões
+    readAiButton.disabled = true;
+    readAiButton.textContent = 'Gerando áudio...';
+    
+    try {
+        const apiKey = elevenlabsApiKey;
+        if (!apiKey) {
+            alert('Por favor, configure sua API Key do ElevenLabs primeiro!');
+            readAiButton.disabled = false;
+            readAiButton.textContent = 'Ler com IA';
+            return;
+        }
+        
+        const voiceId = aiVoiceSelect.value;
+        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'audio/mpeg',
+                'Content-Type': 'application/json',
+                'xi-api-key': apiKey
+            },
+            body: JSON.stringify({
+                text: truncatedText,
+                model_id: 'eleven_multilingual_v2',
+                voice_settings: {
+                    stability: 0.5,
+                    similarity_boost: 0.75
+                }
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(errorData?.detail?.message || `Erro: ${response.status}`);
+        }
+        
+        // Converter resposta em blob de áudio
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        // Configurar o player de áudio
+        audioPlayer.src = audioUrl;
+        audioPlayerContainer.classList.remove('hidden');
+        isPlayingAI = true;
+        stopAiButton.disabled = false;
+        
+        // Evento de fim da reprodução
+        audioPlayer.onended = function() {
+            isPlayingAI = false;
+            readAiButton.disabled = false;
+            stopAiButton.disabled = true;
+            readAiButton.textContent = 'Ler com IA';
+        };
+        
+        // Iniciar reprodução
+        audioPlayer.play();
+        
+    } catch (error) {
+        console.error('Erro ao usar ElevenLabs TTS:', error);
+        alert(`Erro ao gerar áudio: ${error.message || 'Falha na requisição.'}`);
+    } finally {
+        readAiButton.disabled = false;
+        readAiButton.textContent = 'Ler com IA';
+    }
+}
+
+// Parar a reprodução de áudio da IA
+function stopAIAudio() {
+    if (isPlayingAI) {
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
+        isPlayingAI = false;
+        readAiButton.disabled = false;
+        stopAiButton.disabled = true;
+    }
+}
+
+// Alternar entre tipos de vozes (navegador ou IA)
+function toggleVoiceType() {
+    const selectedValue = document.querySelector('input[name="voice-type"]:checked').value;
+    
+    if (selectedValue === 'browser') {
+        browserVoicesDiv.classList.add('active');
+        aiVoicesDiv.classList.remove('active');
+        audioPlayerContainer.classList.add('hidden');
+    } else {
+        browserVoicesDiv.classList.remove('active');
+        aiVoicesDiv.classList.add('active');
+    }
+}
+
 // Listeners de eventos
 uploadButton.addEventListener('click', function() {
     if (fileInput.files.length > 0) {
@@ -270,6 +409,14 @@ pauseButton.addEventListener('click', pauseReading);
 resumeButton.addEventListener('click', resumeReading);
 stopButton.addEventListener('click', stopReading);
 speedRange.addEventListener('input', updateSpeedValue);
+saveApiKeyButton.addEventListener('click', saveApiKey);
+readAiButton.addEventListener('click', readWithElevenLabs);
+stopAiButton.addEventListener('click', stopAIAudio);
+
+// Evento para alternar entre tipos de vozes
+voiceTypeRadios.forEach(function(radio) {
+    radio.addEventListener('change', toggleVoiceType);
+});
 
 // Inicializar a lista de vozes quando a página carregar
 if (synth.onvoiceschanged !== undefined) {

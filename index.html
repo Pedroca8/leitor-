@@ -25,16 +25,47 @@
         </div>
         
         <div class="voice-controls">
-            <button id="read-page">Ler Página Atual</button>
-            <button id="pause-reading">Pausar</button>
-            <button id="resume-reading">Continuar</button>
-            <button id="stop-reading">Parar</button>
-            <div class="voice-settings">
-                <label for="voice-select">Voz:</label>
-                <select id="voice-select"></select>
-                <label for="speed-range">Velocidade:</label>
-                <input type="range" id="speed-range" min="0.5" max="2" step="0.1" value="1">
-                <span id="speed-value">1.0</span>
+            <div class="voice-type-selection">
+                <label>
+                    <input type="radio" name="voice-type" value="browser" checked> Vozes do Navegador
+                </label>
+                <label>
+                    <input type="radio" name="voice-type" value="ai"> Vozes com IA
+                </label>
+            </div>
+            
+            <div id="browser-voices" class="voice-options active">
+                <button id="read-page">Ler Página Atual</button>
+                <button id="pause-reading">Pausar</button>
+                <button id="resume-reading">Continuar</button>
+                <button id="stop-reading">Parar</button>
+                <div class="voice-settings">
+                    <label for="voice-select">Voz:</label>
+                    <select id="voice-select"></select>
+                    <label for="speed-range">Velocidade:</label>
+                    <input type="range" id="speed-range" min="0.5" max="2" step="0.1" value="1">
+                    <span id="speed-value">1.0</span>
+                </div>
+            </div>
+            
+            <div id="ai-voices" class="voice-options">
+                <button id="read-page-ai">Ler com IA</button>
+                <button id="stop-reading-ai">Parar</button>
+                <div class="voice-settings">
+                    <label for="ai-voice-select">Voz IA:</label>
+                    <select id="ai-voice-select">
+                        <option value="21m00Tcm4TlvDq8ikWAM">Rachel (EN)</option>
+                        <option value="AZnzlk1XvdvUeBnXmlld">Domi (EN)</option>
+                        <option value="EXAVITQu4vr4xnSDxMaL">Bella (EN)</option>
+                        <option value="MF3mGyEYCl7XYWbV9V6O" selected>Elli (PT)</option>
+                    </select>
+                    <label for="ai-api-key">API Key (Opcional):</label>
+                    <input type="password" id="ai-api-key" placeholder="Cole sua API key do ElevenLabs">
+                    <button id="save-api-key">Salvar Key</button>
+                </div>
+                <div class="ai-info">
+                    <p class="note">Nota: Precisa criar uma conta gratuita no <a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a> para obter uma API Key. O plano gratuito permite 10.000 caracteres por mês.</p>
+                </div>
             </div>
         </div>
         
@@ -43,6 +74,9 @@
         </div>
         
         <div id="text-content" class="hidden"></div>
+        <div id="audio-player-container" class="hidden">
+            <audio id="ai-audio-player" controls></audio>
+        </div>
     </div>
 
     <script src="app.js"></script>
